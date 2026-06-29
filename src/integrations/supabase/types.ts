@@ -14,13 +14,453 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      aet_percurso: {
+        Row: {
+          aet_id: string
+          br: number | null
+          created_at: string
+          estado: string | null
+          id: string
+          km_fim: number | null
+          km_ini: number | null
+          local_fim: string | null
+          local_inicio: string | null
+          ordem: number
+        }
+        Insert: {
+          aet_id: string
+          br?: number | null
+          created_at?: string
+          estado?: string | null
+          id?: string
+          km_fim?: number | null
+          km_ini?: number | null
+          local_fim?: string | null
+          local_inicio?: string | null
+          ordem?: number
+        }
+        Update: {
+          aet_id?: string
+          br?: number | null
+          created_at?: string
+          estado?: string | null
+          id?: string
+          km_fim?: number | null
+          km_ini?: number | null
+          local_fim?: string | null
+          local_inicio?: string | null
+          ordem?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aet_percurso_aet_id_fkey"
+            columns: ["aet_id"]
+            isOneToOne: false
+            referencedRelation: "aets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aets: {
+        Row: {
+          composicao_id: string | null
+          created_at: string
+          data_fim: string | null
+          data_inicio: string | null
+          destino_carga: string | null
+          id: string
+          numero_aet: string | null
+          origem_carga: string | null
+          pdf_url: string | null
+          portal_origem: string
+          resolucao: string | null
+          situacao: string
+          updated_at: string
+        }
+        Insert: {
+          composicao_id?: string | null
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string | null
+          destino_carga?: string | null
+          id?: string
+          numero_aet?: string | null
+          origem_carga?: string | null
+          pdf_url?: string | null
+          portal_origem?: string
+          resolucao?: string | null
+          situacao?: string
+          updated_at?: string
+        }
+        Update: {
+          composicao_id?: string | null
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string | null
+          destino_carga?: string | null
+          id?: string
+          numero_aet?: string | null
+          origem_carga?: string | null
+          pdf_url?: string | null
+          portal_origem?: string
+          resolucao?: string | null
+          situacao?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aets_composicao_id_fkey"
+            columns: ["composicao_id"]
+            isOneToOne: false
+            referencedRelation: "composicoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      boletos: {
+        Row: {
+          aet_id: string
+          created_at: string
+          data_pagamento: string | null
+          data_vencimento: string | null
+          id: string
+          status: string
+          updated_at: string
+          url: string | null
+          valor: number
+        }
+        Insert: {
+          aet_id: string
+          created_at?: string
+          data_pagamento?: string | null
+          data_vencimento?: string | null
+          id?: string
+          status?: string
+          updated_at?: string
+          url?: string | null
+          valor?: number
+        }
+        Update: {
+          aet_id?: string
+          created_at?: string
+          data_pagamento?: string | null
+          data_vencimento?: string | null
+          id?: string
+          status?: string
+          updated_at?: string
+          url?: string | null
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "boletos_aet_id_fkey"
+            columns: ["aet_id"]
+            isOneToOne: false
+            referencedRelation: "aets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      composicoes: {
+        Row: {
+          altura_total: number | null
+          ativo: boolean
+          comprimento_total: number | null
+          created_at: string
+          dist_b: number | null
+          dist_c: number | null
+          dist_d: number | null
+          eixos_cavalo: Json
+          eixos_reboque: Json
+          excesso_direito: number | null
+          excesso_esquerdo: number | null
+          id: string
+          largura_total: number | null
+          largura_veiculo: number | null
+          reboque_id: string
+          updated_at: string
+          veiculo_id: string
+        }
+        Insert: {
+          altura_total?: number | null
+          ativo?: boolean
+          comprimento_total?: number | null
+          created_at?: string
+          dist_b?: number | null
+          dist_c?: number | null
+          dist_d?: number | null
+          eixos_cavalo?: Json
+          eixos_reboque?: Json
+          excesso_direito?: number | null
+          excesso_esquerdo?: number | null
+          id?: string
+          largura_total?: number | null
+          largura_veiculo?: number | null
+          reboque_id: string
+          updated_at?: string
+          veiculo_id: string
+        }
+        Update: {
+          altura_total?: number | null
+          ativo?: boolean
+          comprimento_total?: number | null
+          created_at?: string
+          dist_b?: number | null
+          dist_c?: number | null
+          dist_d?: number | null
+          eixos_cavalo?: Json
+          eixos_reboque?: Json
+          excesso_direito?: number | null
+          excesso_esquerdo?: number | null
+          id?: string
+          largura_total?: number | null
+          largura_veiculo?: number | null
+          reboque_id?: string
+          updated_at?: string
+          veiculo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "composicoes_reboque_id_fkey"
+            columns: ["reboque_id"]
+            isOneToOne: false
+            referencedRelation: "reboques"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "composicoes_veiculo_id_fkey"
+            columns: ["veiculo_id"]
+            isOneToOne: false
+            referencedRelation: "veiculos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      importacoes_trechos: {
+        Row: {
+          arquivo: string
+          atualizados: number
+          created_at: string
+          desativados: number
+          id: string
+          inseridos: number
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          arquivo: string
+          atualizados?: number
+          created_at?: string
+          desativados?: number
+          id?: string
+          inseridos?: number
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          arquivo?: string
+          atualizados?: number
+          created_at?: string
+          desativados?: number
+          id?: string
+          inseridos?: number
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          nome: string
+          role: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id: string
+          nome: string
+          role?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          nome?: string
+          role?: string
+        }
+        Relationships: []
+      }
+      reboques: {
+        Row: {
+          ano_fabricacao: number | null
+          ativo: boolean
+          chassi: string | null
+          created_at: string
+          id: string
+          marca: string | null
+          modelo: string | null
+          num_eixos: number | null
+          placa: string
+          renavam: string | null
+          rntrc: string | null
+          tara: number | null
+          tipo_carroceria: string | null
+          tipo_eixos: string | null
+          tipo_engate: string | null
+          updated_at: string
+        }
+        Insert: {
+          ano_fabricacao?: number | null
+          ativo?: boolean
+          chassi?: string | null
+          created_at?: string
+          id?: string
+          marca?: string | null
+          modelo?: string | null
+          num_eixos?: number | null
+          placa: string
+          renavam?: string | null
+          rntrc?: string | null
+          tara?: number | null
+          tipo_carroceria?: string | null
+          tipo_eixos?: string | null
+          tipo_engate?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ano_fabricacao?: number | null
+          ativo?: boolean
+          chassi?: string | null
+          created_at?: string
+          id?: string
+          marca?: string | null
+          modelo?: string | null
+          num_eixos?: number | null
+          placa?: string
+          renavam?: string | null
+          rntrc?: string | null
+          tara?: number | null
+          tipo_carroceria?: string | null
+          tipo_eixos?: string | null
+          tipo_engate?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      trechos: {
+        Row: {
+          ativo: boolean
+          br: number
+          created_at: string
+          estado: string
+          fonte: string
+          id: string
+          km_fim: number
+          km_ini: number
+          linha: number | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          br: number
+          created_at?: string
+          estado: string
+          fonte?: string
+          id?: string
+          km_fim: number
+          km_ini: number
+          linha?: number | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          br?: number
+          created_at?: string
+          estado?: string
+          fonte?: string
+          id?: string
+          km_fim?: number
+          km_ini?: number
+          linha?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      veiculos: {
+        Row: {
+          ano_fabricacao: number | null
+          ativo: boolean
+          bidirecional: boolean
+          chassi: string | null
+          cmt: number | null
+          created_at: string
+          direcao: string | null
+          id: string
+          marca: string | null
+          modelo: string | null
+          num_eixos: number | null
+          placa: string
+          potencia: number | null
+          renavam: string | null
+          rntrc: string | null
+          tara: number | null
+          tipo_carroceria: string | null
+          tracao: string | null
+          updated_at: string
+        }
+        Insert: {
+          ano_fabricacao?: number | null
+          ativo?: boolean
+          bidirecional?: boolean
+          chassi?: string | null
+          cmt?: number | null
+          created_at?: string
+          direcao?: string | null
+          id?: string
+          marca?: string | null
+          modelo?: string | null
+          num_eixos?: number | null
+          placa: string
+          potencia?: number | null
+          renavam?: string | null
+          rntrc?: string | null
+          tara?: number | null
+          tipo_carroceria?: string | null
+          tracao?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ano_fabricacao?: number | null
+          ativo?: boolean
+          bidirecional?: boolean
+          chassi?: string | null
+          cmt?: number | null
+          created_at?: string
+          direcao?: string | null
+          id?: string
+          marca?: string | null
+          modelo?: string | null
+          num_eixos?: number | null
+          placa?: string
+          potencia?: number | null
+          renavam?: string | null
+          rntrc?: string | null
+          tara?: number | null
+          tipo_carroceria?: string | null
+          tracao?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: { Args: { _uid: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
