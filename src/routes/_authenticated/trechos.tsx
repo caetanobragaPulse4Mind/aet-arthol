@@ -114,7 +114,7 @@ function TrechosPage() {
       // Upsert in batches
       const batchSize = 500;
       for (let i = 0; i < parsed.length; i += batchSize) {
-        const batch = parsed.slice(i, i + batchSize).map((p) => ({ ...p, ativo: true, fonte: "importacao" }));
+        const batch = parsed.slice(i, i + batchSize).map((p) => ({ ...p, ativo: true, fonte: "planilha" }));
         const { error } = await supabase.from("trechos").upsert(batch, { onConflict: "estado,br,km_ini,km_fim" });
         if (error) throw error;
       }
