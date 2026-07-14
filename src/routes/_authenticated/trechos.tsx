@@ -10,7 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Upload, Search, FileSpreadsheet } from "lucide-react";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Upload, Search, FileSpreadsheet, Pencil, Trash2, ArrowUpToLine, ArrowDownToLine } from "lucide-react";
 import { formatDateBR } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/trechos")({
@@ -39,6 +41,15 @@ type Importacao = {
   created_at: string;
 };
 
+type EditorState = {
+  mode: "edit" | "insert";
+  id?: string;
+  estado: string;
+  br: string;
+  km_ini: string;
+  km_fim: string;
+};
+
 function TrechosPage() {
   const { profile } = useAuth();
   const isAdmin = profile?.role === "admin";
@@ -47,6 +58,9 @@ function TrechosPage() {
   const [uf, setUf] = useState("");
   const [importing, setImporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [editor, setEditor] = useState<EditorState | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [toDelete, setToDelete] = useState<Trecho | null>(null);
 
   const { data: trechos, isLoading } = useQuery({
     queryKey: ["trechos", busca, uf],
@@ -85,7 +99,6 @@ function TrechosPage() {
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows: any[] = XLSX.utils.sheet_to_json(ws, { defval: null });
 
-      // Parse rows -> {br, estado, km_ini, km_fim, linha}
       const parsed: { br: number; estado: string; km_ini: number; km_fim: number; linha: number }[] = [];
       for (let i = 0; i < rows.length; i++) {
         const r = rows[i];
@@ -102,7 +115,6 @@ function TrechosPage() {
         return;
       }
 
-      // Fetch existing trechos to compute diff
       const { data: existing } = await supabase.from("trechos").select("id, br, estado, km_ini, km_fim, ativo");
       const key = (t: { br: number; estado: string; km_ini: number; km_fim: number }) =>
         `${t.estado}|${t.br}|${t.km_ini.toFixed(3)}|${t.km_fim.toFixed(3)}`;
@@ -111,7 +123,6 @@ function TrechosPage() {
 
       let inseridos = 0, atualizados = 0, desativados = 0;
 
-      // Upsert in batches
       const batchSize = 500;
       for (let i = 0; i < parsed.length; i += batchSize) {
         const batch = parsed.slice(i, i + batchSize).map((p) => ({ ...p, ativo: true, fonte: "planilha" }));
@@ -126,10 +137,8 @@ function TrechosPage() {
         else atualizados++;
       }
 
-      // Desativar trechos ausentes na nova planilha
       const toDeactivate = (existing ?? []).filter((e) => e.ativo && !parsedKeys.has(key(e as any))).map((e) => e.id);
       if (toDeactivate.length > 0) {
-        // chunked
         for (let i = 0; i < toDeactivate.length; i += 200) {
           const ids = toDeactivate.slice(i, i + 200);
           const { error } = await supabase.from("trechos").update({ ativo: false }).in("id", ids);
@@ -159,6 +168,74 @@ function TrechosPage() {
     } finally {
       setImporting(false);
       if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  function openEdit(t: Trecho) {
+    setEditor({ mode: "edit", id: t.id, estado: t.estado, br: String(t.br), km_ini: String(t.km_ini), km_fim: String(t.km_fim) });
+  }
+
+  function openInsert(reference: Trecho, position: "above" | "below") {
+    const ext = Math.max(reference.km_fim - reference.km_ini, 1);
+    const km_ini = position === "above"
+      ? Math.max(reference.km_ini - ext, 0)
+      : reference.km_fim;
+    const km_fim = position === "above"
+      ? reference.km_ini
+      : reference.km_fim + ext;
+    setEditor({
+      mode: "insert",
+      estado: reference.estado,
+      br: String(reference.br),
+      km_ini: km_ini.toFixed(2),
+      km_fim: km_fim.toFixed(2),
+    });
+  }
+
+  async function saveEditor() {
+    if (!editor) return;
+    const br = Number(editor.br);
+    const km_ini = Number(String(editor.km_ini).replace(",", "."));
+    const km_fim = Number(String(editor.km_fim).replace(",", "."));
+    const estado = editor.estado.toUpperCase().trim();
+    if (!br || !estado || isNaN(km_ini) || isNaN(km_fim)) {
+      toast.error("Preencha todos os campos corretamente");
+      return;
+    }
+    if (km_fim <= km_ini) {
+      toast.error("KM final deve ser maior que KM inicial");
+      return;
+    }
+    setSaving(true);
+    try {
+      if (editor.mode === "edit" && editor.id) {
+        const { error } = await supabase.from("trechos").update({ estado, br, km_ini, km_fim }).eq("id", editor.id);
+        if (error) throw error;
+        toast.success("Trecho atualizado");
+      } else {
+        const { error } = await supabase.from("trechos").insert({ estado, br, km_ini, km_fim, ativo: true, fonte: "manual" });
+        if (error) throw error;
+        toast.success("Trecho incluído");
+      }
+      setEditor(null);
+      qc.invalidateQueries({ queryKey: ["trechos"] });
+    } catch (err: any) {
+      toast.error("Erro ao salvar", { description: err.message });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function confirmDelete() {
+    if (!toDelete) return;
+    try {
+      const { error } = await supabase.from("trechos").update({ ativo: false }).eq("id", toDelete.id);
+      if (error) throw error;
+      toast.success("Trecho removido");
+      setToDelete(null);
+      qc.invalidateQueries({ queryKey: ["trechos"] });
+    } catch (err: any) {
+      toast.error("Erro ao remover", { description: err.message });
     }
   }
 
@@ -206,10 +283,11 @@ function TrechosPage() {
               <TableHead>KM final</TableHead>
               <TableHead>Extensão (km)</TableHead>
               <TableHead>Fonte</TableHead>
+              {isAdmin && <TableHead className="text-right">Ações</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading && <TableRow><TableCell colSpan={6} className="text-center py-8 text-slate-400">Carregando...</TableCell></TableRow>}
+            {isLoading && <TableRow><TableCell colSpan={isAdmin ? 7 : 6} className="text-center py-8 text-slate-400">Carregando...</TableCell></TableRow>}
             {trechos?.map((t) => (
               <TableRow key={t.id}>
                 <TableCell className="font-medium">{t.estado}</TableCell>
@@ -218,9 +296,27 @@ function TrechosPage() {
                 <TableCell>{t.km_fim.toFixed(2)}</TableCell>
                 <TableCell>{(t.km_fim - t.km_ini).toFixed(2)}</TableCell>
                 <TableCell><Badge variant="outline">{t.fonte}</Badge></TableCell>
+                {isAdmin && (
+                  <TableCell className="text-right">
+                    <div className="inline-flex gap-1">
+                      <Button variant="ghost" size="sm" title="Incluir acima" onClick={() => openInsert(t, "above")}>
+                        <ArrowUpToLine className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" title="Incluir abaixo" onClick={() => openInsert(t, "below")}>
+                        <ArrowDownToLine className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" title="Editar" onClick={() => openEdit(t)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" title="Excluir" onClick={() => setToDelete(t)}>
+                        <Trash2 className="h-4 w-4 text-red-600" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
-            {trechos?.length === 0 && <TableRow><TableCell colSpan={6} className="text-center py-8 text-slate-400">Nenhum trecho encontrado</TableCell></TableRow>}
+            {trechos?.length === 0 && <TableRow><TableCell colSpan={isAdmin ? 7 : 6} className="text-center py-8 text-slate-400">Nenhum trecho encontrado</TableCell></TableRow>}
           </TableBody>
         </Table>
       </Card>
@@ -257,6 +353,53 @@ function TrechosPage() {
           </Table>
         </Card>
       )}
+
+      <Dialog open={!!editor} onOpenChange={(o) => !o && setEditor(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editor?.mode === "edit" ? "Editar trecho" : "Novo trecho"}</DialogTitle>
+          </DialogHeader>
+          {editor && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">UF</label>
+                <Input maxLength={2} value={editor.estado} onChange={(e) => setEditor({ ...editor, estado: e.target.value.toUpperCase() })} />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">BR</label>
+                <Input value={editor.br} onChange={(e) => setEditor({ ...editor, br: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">KM inicial</label>
+                <Input value={editor.km_ini} onChange={(e) => setEditor({ ...editor, km_ini: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">KM final</label>
+                <Input value={editor.km_fim} onChange={(e) => setEditor({ ...editor, km_fim: e.target.value })} />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditor(null)}>Cancelar</Button>
+            <Button onClick={saveEditor} disabled={saving}>{saving ? "Salvando..." : "Salvar"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover trecho?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {toDelete && `BR-${String(toDelete.br).padStart(3, "0")} ${toDelete.estado} • KM ${toDelete.km_ini.toFixed(2)} → ${toDelete.km_fim.toFixed(2)}. O trecho será desativado.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>Remover</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
