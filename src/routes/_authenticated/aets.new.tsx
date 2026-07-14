@@ -67,7 +67,7 @@ function NewAet() {
   return (
     <div className="space-y-6 max-w-3xl">
       <div className="flex items-center gap-3">
-        <Link to="/aets"><Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4" /></Button></Link>
+        <Link to="/dashboard"><Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4" /></Button></Link>
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Nova AET</h1>
           <p className="text-sm text-slate-500 mt-1">Cadastro de Autorização Especial de Trânsito</p>
@@ -120,7 +120,7 @@ function NewAet() {
           </div>
 
           <div className="flex justify-end gap-2 pt-4 border-t">
-            <Link to="/aets"><Button type="button" variant="outline">Cancelar</Button></Link>
+            <Link to="/dashboard"><Button type="button" variant="outline">Cancelar</Button></Link>
             <Button type="submit" disabled={saving}>{saving ? "Salvando..." : "Criar AET"}</Button>
           </div>
         </form>
