@@ -8,15 +8,24 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SituacaoBadge } from "@/components/situacao-badge";
 import { formatDateBR, todayISO, addDaysISO } from "@/lib/format";
-import { FileText, AlertTriangle, Receipt, Clock, ExternalLink, Eye, Plus, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { FileText, AlertTriangle, Receipt, Clock, ExternalLink, Eye, Plus, ArrowUp, ArrowDown, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
 });
 
 const SITUACOES = ["LIBERADA", "EM SOLICITAÇÃO", "EM PROCESSO DE ANÁLISE", "CANCELADA", "VENCIDA"];
+const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
-type SortKey = "numero_aet" | "resolucao" | "origem_carga" | "destino_carga" | "situacao" | "data_inicio";
+type SortKey = "numero_aet" | "resolucao" | "origem_carga" | "destino_carga" | "situacao" | "data_fim";
+
+function monthRange(offset: number) {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0);
+  const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return { start: iso(start), end: iso(end), label: `${MESES[start.getMonth()]} de ${start.getFullYear()}` };
+}
 
 function Dashboard() {
   const today = todayISO();
@@ -24,10 +33,11 @@ function Dashboard() {
 
   const [situacao, setSituacao] = useState<string>("all");
   const [placa, setPlaca] = useState("");
-  const [dataIni, setDataIni] = useState("");
-  const [dataFim, setDataFim] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [monthOffset, setMonthOffset] = useState(0);
+  const [sortKey, setSortKey] = useState<SortKey | null>("data_fim");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  const range = useMemo(() => monthRange(monthOffset), [monthOffset]);
 
   const { data: stats } = useQuery({
     queryKey: ["dashboard-stats", today, in30],
@@ -52,15 +62,15 @@ function Dashboard() {
   });
 
   const { data: aets, isLoading } = useQuery({
-    queryKey: ["dashboard-aets", situacao, placa, dataIni, dataFim],
+    queryKey: ["dashboard-aets", situacao, placa, range.start, range.end],
     queryFn: async () => {
       let q = supabase
         .from("aets")
         .select("id, numero_aet, resolucao, origem_carga, destino_carga, situacao, data_inicio, data_fim, pdf_url, composicoes(veiculos(placa), reboques(placa))")
-        .order("created_at", { ascending: false });
+        .gte("data_fim", range.start)
+        .lte("data_fim", range.end)
+        .order("data_fim", { ascending: true });
       if (situacao !== "all") q = q.eq("situacao", situacao);
-      if (dataIni) q = q.gte("data_inicio", dataIni);
-      if (dataFim) q = q.lte("data_fim", dataFim);
       const { data } = await q;
       let rows = data ?? [];
       if (placa.trim()) {
@@ -151,7 +161,7 @@ function Dashboard() {
       </div>
 
       <Card className="p-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <label className="text-xs text-slate-500 mb-1 block">Situação</label>
             <Select value={situacao} onValueChange={setSituacao}>
@@ -166,21 +176,26 @@ function Dashboard() {
             <label className="text-xs text-slate-500 mb-1 block">Placa</label>
             <Input placeholder="Ex: ABC1D23" value={placa} onChange={(e) => setPlaca(e.target.value)} />
           </div>
-          <div>
-            <label className="text-xs text-slate-500 mb-1 block">Início ≥</label>
-            <Input type="date" value={dataIni} onChange={(e) => setDataIni(e.target.value)} />
-          </div>
-          <div>
-            <label className="text-xs text-slate-500 mb-1 block">Fim ≤</label>
-            <Input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} />
-          </div>
         </div>
       </Card>
 
       <Card className="p-0 overflow-hidden">
-        <div className="px-5 py-4 border-b">
-          <h2 className="font-semibold text-slate-900">AETs</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Ordenadas por cadastro mais recente</p>
+        <div className="px-5 py-4 border-b flex items-center justify-between gap-3">
+          <div>
+            <h2 className="font-semibold text-slate-900">AETs — {range.label}</h2>
+            <p className="text-xs text-slate-500 mt-0.5">Ordenadas por validade (vencimento)</p>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="sm" onClick={() => setMonthOffset((o) => o - 1)}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            {monthOffset !== 0 && (
+              <Button variant="ghost" size="sm" onClick={() => setMonthOffset(0)}>Hoje</Button>
+            )}
+            <Button variant="outline" size="sm" onClick={() => setMonthOffset((o) => o + 1)}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -191,7 +206,7 @@ function Dashboard() {
                 <SortHeader k="origem_carga" label="Origem" />
                 <SortHeader k="destino_carga" label="Destino" />
                 <SortHeader k="situacao" label="Situação" />
-                <SortHeader k="data_inicio" label="Validade" />
+                <SortHeader k="data_fim" label="Validade" />
                 <th className="text-right px-5 py-2.5 font-medium">Ações</th>
               </tr>
             </thead>
@@ -224,7 +239,7 @@ function Dashboard() {
                 </tr>
               ))}
               {!isLoading && sorted.length === 0 && (
-                <tr><td colSpan={7} className="px-5 py-10 text-center text-slate-500">Nenhuma AET encontrada.</td></tr>
+                <tr><td colSpan={7} className="px-5 py-10 text-center text-slate-500">Nenhuma AET com validade neste mês.</td></tr>
               )}
             </tbody>
           </table>
