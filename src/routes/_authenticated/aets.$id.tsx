@@ -89,7 +89,7 @@ function AetDetail() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link to="/aets"><Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4" /></Button></Link>
+          <Link to="/dashboard"><Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4" /></Button></Link>
           <div>
             <h1 className="text-2xl font-semibold text-slate-900">
               AET {aet.numero_aet ?? "(sem número)"}

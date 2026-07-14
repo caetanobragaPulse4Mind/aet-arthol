@@ -1,5 +1,5 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, FileText, Receipt, Truck, Boxes, Map, Users, LogOut } from "lucide-react";
+import { LayoutDashboard, Receipt, Truck, Boxes, Map, Users, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -8,8 +8,7 @@ import type { ReactNode } from "react";
 type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; adminOnly?: boolean };
 
 const NAV: NavItem[] = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/aets", label: "AETs", icon: FileText },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/boletos", label: "Boletos", icon: Receipt },
   { to: "/veiculos", label: "Veículos", icon: Truck },
   { to: "/composicoes", label: "Composições", icon: Boxes },
@@ -38,7 +37,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
         <nav className="flex-1 px-3 py-4 space-y-0.5">
           {NAV.filter((n) => !n.adminOnly || isAdmin).map((item) => {
-            const active = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
+            const active = pathname === item.to || pathname.startsWith(item.to + "/");
             const Icon = item.icon;
             return (
               <Link
