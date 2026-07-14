@@ -18,7 +18,6 @@ import { Route as AuthenticatedTrechosRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedComposicoesRouteImport } from './routes/_authenticated/composicoes'
 import { Route as AuthenticatedBoletosRouteImport } from './routes/_authenticated/boletos'
-import { Route as AuthenticatedAetsIndexRouteImport } from './routes/_authenticated/aets.index'
 import { Route as AuthenticatedAetsNewRouteImport } from './routes/_authenticated/aets.new'
 import { Route as AuthenticatedAetsIdRouteImport } from './routes/_authenticated/aets.$id'
 
@@ -67,11 +66,6 @@ const AuthenticatedBoletosRoute = AuthenticatedBoletosRouteImport.update({
   path: '/boletos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedAetsIndexRoute = AuthenticatedAetsIndexRouteImport.update({
-  id: '/aets/',
-  path: '/aets/',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedAetsNewRoute = AuthenticatedAetsNewRouteImport.update({
   id: '/aets/new',
   path: '/aets/new',
@@ -94,7 +88,6 @@ export interface FileRoutesByFullPath {
   '/veiculos': typeof AuthenticatedVeiculosRoute
   '/aets/$id': typeof AuthenticatedAetsIdRoute
   '/aets/new': typeof AuthenticatedAetsNewRoute
-  '/aets/': typeof AuthenticatedAetsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -107,7 +100,6 @@ export interface FileRoutesByTo {
   '/veiculos': typeof AuthenticatedVeiculosRoute
   '/aets/$id': typeof AuthenticatedAetsIdRoute
   '/aets/new': typeof AuthenticatedAetsNewRoute
-  '/aets': typeof AuthenticatedAetsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -122,7 +114,6 @@ export interface FileRoutesById {
   '/_authenticated/veiculos': typeof AuthenticatedVeiculosRoute
   '/_authenticated/aets/$id': typeof AuthenticatedAetsIdRoute
   '/_authenticated/aets/new': typeof AuthenticatedAetsNewRoute
-  '/_authenticated/aets/': typeof AuthenticatedAetsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -137,7 +128,6 @@ export interface FileRouteTypes {
     | '/veiculos'
     | '/aets/$id'
     | '/aets/new'
-    | '/aets/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -150,7 +140,6 @@ export interface FileRouteTypes {
     | '/veiculos'
     | '/aets/$id'
     | '/aets/new'
-    | '/aets'
   id:
     | '__root__'
     | '/'
@@ -164,7 +153,6 @@ export interface FileRouteTypes {
     | '/_authenticated/veiculos'
     | '/_authenticated/aets/$id'
     | '/_authenticated/aets/new'
-    | '/_authenticated/aets/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -238,13 +226,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBoletosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/aets/': {
-      id: '/_authenticated/aets/'
-      path: '/aets'
-      fullPath: '/aets/'
-      preLoaderRoute: typeof AuthenticatedAetsIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/aets/new': {
       id: '/_authenticated/aets/new'
       path: '/aets/new'
@@ -271,7 +252,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedVeiculosRoute: typeof AuthenticatedVeiculosRoute
   AuthenticatedAetsIdRoute: typeof AuthenticatedAetsIdRoute
   AuthenticatedAetsNewRoute: typeof AuthenticatedAetsNewRoute
-  AuthenticatedAetsIndexRoute: typeof AuthenticatedAetsIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -283,7 +263,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedVeiculosRoute: AuthenticatedVeiculosRoute,
   AuthenticatedAetsIdRoute: AuthenticatedAetsIdRoute,
   AuthenticatedAetsNewRoute: AuthenticatedAetsNewRoute,
-  AuthenticatedAetsIndexRoute: AuthenticatedAetsIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
