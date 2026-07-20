@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SituacaoBadge } from "@/components/situacao-badge";
 import { formatDateBR, todayISO, addDaysISO } from "@/lib/format";
-import { FileText, AlertTriangle, Receipt, Clock, ExternalLink, Eye, Plus, ArrowUp, ArrowDown, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { FileText, AlertTriangle, Receipt, Clock, FileSearch, Plus, ArrowUp, ArrowDown, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
@@ -41,6 +41,18 @@ function monthRange(offset: number) {
 function offsetFromYearMonth(year: number, month: number) {
   const now = new Date();
   return (year - now.getFullYear()) * 12 + (month - now.getMonth());
+}
+
+// TODO: o backend ainda não expõe uma rota HTTP servindo o volume aet-rpa-pdfs.
+// Quando a rota estiver pronta, ajustar este único lugar (ex: static serve por numero_aet).
+function buildPdfUrl(numero: string, ano: string): string {
+  return `/api/pdf/${numero}/${ano}`;
+}
+
+// TODO: idem acima, mas para o PDF do boleto. O campo que indica "PDF anexado"
+// ainda não existe na tabela `boletos` — quando existir, ajustar aqui e no select da query.
+function buildBoletoUrl(boletoId: string): string | null {
+  return null; // ex futuro: `https://aet-rpa.pulse4mind.com/boletos/${encodeURIComponent(boletoId)}.pdf`
 }
 
 function Dashboard() {
@@ -84,7 +96,7 @@ function Dashboard() {
       // igual ao filtro por ano/mês do próprio site do SIAET — não mistura meses.
       let q = supabase
         .from("aets")
-        .select("id, numero_aet, resolucao, origem_carga, destino_carga, situacao, data_inicio, data_fim, pdf_url, composicoes(veiculos(placa), reboques(placa))")
+        .select("id, numero_aet, resolucao, origem_carga, destino_carga, situacao, data_inicio, data_fim, pdf_anexado, composicoes(veiculos(placa), reboques(placa)), boletos(id, status)")
         .gte("data_inicio", range.start)
         .lte("data_inicio", range.end)
         .order("data_inicio", { ascending: true });
@@ -243,44 +255,99 @@ function Dashboard() {
             <thead className="bg-slate-50 text-slate-600">
               <tr>
                 <SortHeader k="numero_aet" label="Nº AET" />
+                <th className="text-left px-5 py-2.5 font-medium">AET</th>
+                <th className="text-left px-5 py-2.5 font-medium">Boleto</th>
+                <SortHeader k="data_inicio" label="Data AET" />
+                <SortHeader k="data_fim" label="Validade" />
                 <SortHeader k="resolucao" label="Resolução" />
                 <SortHeader k="origem_carga" label="Origem" />
                 <SortHeader k="destino_carga" label="Destino" />
                 <SortHeader k="situacao" label="Situação" />
-                <SortHeader k="data_inicio" label="Data AET" />
-                <SortHeader k="data_fim" label="Validade" />
-                <th className="text-right px-5 py-2.5 font-medium">Ações</th>
               </tr>
             </thead>
             <tbody>
               {isLoading && (
-                <tr><td colSpan={8} className="px-5 py-10 text-center text-slate-400">Carregando...</td></tr>
+                <tr><td colSpan={9} className="px-5 py-10 text-center text-slate-400">Carregando...</td></tr>
               )}
               {!isLoading && sorted.map((a: any) => (
                 <tr key={a.id} className="border-t hover:bg-slate-50">
                   <td className="px-5 py-2.5 font-medium text-slate-900">{a.numero_aet ?? "—"}</td>
+                  <td className="px-5 py-2.5">
+                    {(() => {
+                      const pdfUrl = a.pdf_anexado ? buildPdfUrl(a.numero_aet) : null;
+                      if (!pdfUrl) {
+                        const title = a.pdf_anexado ? "PDF anexado, mas rota ainda não disponível" : "PDF ainda não gerado";
+                        return (
+                          <button
+                            type="button"
+                            disabled
+                            title={title}
+                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-300 cursor-not-allowed"
+                          >
+                            <FileSearch className="h-5 w-5" />
+                            <span className="text-xs font-medium">AET</span>
+                          </button>
+                        );
+                      }
+                      return (
+                        <a
+                          href={pdfUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Abrir AET"
+                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:border-blue-300 transition-colors"
+                        >
+                          <FileSearch className="h-5 w-5" />
+                          <span className="text-xs font-semibold">AET</span>
+                        </a>
+                      );
+                    })()}
+                  </td>
+                  <td className="px-5 py-2.5">
+                    {(() => {
+                      const boleto = a.boletos?.[0] ?? a.boletos ?? null;
+                      // Campo de PDF do boleto ainda não existe no schema — sempre desabilitado por enquanto.
+                      const boletoUrl = buildBoletoUrl(boleto?.id);
+                      const title = !boleto
+                        ? "Sem boleto vinculado"
+                        : `Boleto (${boleto.status}) — PDF ainda não disponível`;
+                      if (!boletoUrl) {
+                        return (
+                          <button
+                            type="button"
+                            disabled
+                            title={title}
+                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-300 cursor-not-allowed"
+                          >
+                            <Receipt className="h-5 w-5" />
+                            <span className="text-xs font-medium">Boleto</span>
+                          </button>
+                        );
+                      }
+                      return (
+                        <a
+                          href={boletoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Abrir boleto"
+                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition-colors"
+                        >
+                          <Receipt className="h-5 w-5" />
+                          <span className="text-xs font-semibold">Boleto</span>
+                        </a>
+                      );
+                    })()}
+                  </td>
+                  <td className="px-5 py-2.5 whitespace-nowrap">{formatDateBR(a.data_inicio)}</td>
+                  <td className="px-5 py-2.5 whitespace-nowrap">{formatDateBR(a.data_fim)}</td>
                   <td className="px-5 py-2.5">{a.resolucao ?? "—"}</td>
                   <td className="px-5 py-2.5">{a.origem_carga ?? "—"}</td>
                   <td className="px-5 py-2.5">{a.destino_carga ?? "—"}</td>
                   <td className="px-5 py-2.5"><SituacaoBadge situacao={a.situacao} /></td>
-                  <td className="px-5 py-2.5 whitespace-nowrap">{formatDateBR(a.data_inicio)}</td>
-                  <td className="px-5 py-2.5 whitespace-nowrap">{formatDateBR(a.data_fim)}</td>
-                  <td className="px-5 py-2.5 text-right">
-                    <div className="inline-flex gap-1">
-                      <Link to="/aets/$id" params={{ id: a.id }}>
-                        <Button variant="ghost" size="sm"><Eye className="h-4 w-4" /></Button>
-                      </Link>
-                      {a.pdf_url && (
-                        <a href={a.pdf_url} target="_blank" rel="noopener noreferrer">
-                          <Button variant="ghost" size="sm"><ExternalLink className="h-4 w-4" /></Button>
-                        </a>
-                      )}
-                    </div>
-                  </td>
                 </tr>
               ))}
               {!isLoading && sorted.length === 0 && (
-                <tr><td colSpan={8} className="px-5 py-10 text-center text-slate-500">Nenhuma AET solicitada neste mês.</td></tr>
+                <tr><td colSpan={9} className="px-5 py-10 text-center text-slate-500">Nenhuma AET solicitada neste mês.</td></tr>
               )}
             </tbody>
           </table>
