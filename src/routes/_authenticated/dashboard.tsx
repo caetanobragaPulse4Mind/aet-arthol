@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SituacaoBadge } from "@/components/situacao-badge";
 import { formatDateBR, todayISO, addDaysISO } from "@/lib/format";
-import { FileText, AlertTriangle, Receipt, Clock, FileSearch, Plus, ArrowUp, ArrowDown, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { useDownloadAetPdf } from "@/hooks/use-download-aet-pdf";
+import { FileText, AlertTriangle, Receipt, Clock, FileSearch, Plus, ArrowUp, ArrowDown, ArrowUpDown, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
@@ -43,16 +44,11 @@ function offsetFromYearMonth(year: number, month: number) {
   return (year - now.getFullYear()) * 12 + (month - now.getMonth());
 }
 
-// TODO: o backend ainda não expõe uma rota HTTP servindo o volume aet-rpa-pdfs.
-// Quando a rota estiver pronta, ajustar este único lugar (ex: static serve por numero_aet).
-function buildPdfUrl(numero: string, ano: string): string {
-  return `/api/pdf/${numero}/${ano}`;
-}
-
-// TODO: idem acima, mas para o PDF do boleto. O campo que indica "PDF anexado"
-// ainda não existe na tabela `boletos` — quando existir, ajustar aqui e no select da query.
+// TODO: idem para o boleto. O campo que indica "PDF anexado" ainda não existe
+// na tabela `boletos` — quando existir, seguir o mesmo padrão do downloadAetPdf
+// (rota própria no aet-rpa + server function + hook) e trocar este placeholder.
 function buildBoletoUrl(boletoId: string): string | null {
-  return null; // ex futuro: `https://aet-rpa.pulse4mind.com/boletos/${encodeURIComponent(boletoId)}.pdf`
+  return null; // ex futuro: proxy via server function, igual ao PDF da AET
 }
 
 function Dashboard() {
@@ -158,6 +154,36 @@ function Dashboard() {
   // opções pro select de ano: uns anos pra trás e pra frente do atual
   const anoAtual = new Date().getFullYear();
   const anos = Array.from({ length: 6 }, (_, i) => anoAtual - 3 + i);
+
+  // Download do PDF da AET: chama a server function (proxy autenticado pro aet-rpa)
+  // e reconstrói o Blob no client. `pendingId` controla o spinner por linha,
+  // já que várias AETs podem estar na tabela ao mesmo tempo.
+  const { mutate: downloadPdf, isPending, variables: pendingVars } = useDownloadAetPdf();
+  const [pendingId, setPendingId] = useState<string | null>(null);
+
+  function handleDownloadAet(aetId: string, numeroAetCompleto: string) {
+    // numero_aet vem como "284237/2026" — número e ano juntos no mesmo campo.
+    // Usa regex (não split cru) pra tolerar espaços acidentais em volta da barra.
+    const match = (numeroAetCompleto ?? "").match(/(\d+)\s*\/\s*(\d{4})/);
+    if (!match) {
+      console.error("numero_aet em formato inesperado:", JSON.stringify(numeroAetCompleto));
+      alert(`Não foi possível interpretar o número da AET: "${numeroAetCompleto}".`);
+      return;
+    }
+    const [, numeroAet, ano] = match;
+    setPendingId(aetId);
+    downloadPdf(
+      { numeroAet, ano },
+      {
+        onSettled: () => setPendingId(null),
+        onError: (err) => {
+          console.error("Erro ao baixar AET:", err);
+          // TODO: trocar por toast do design system quando disponível
+          alert("Não foi possível baixar o PDF da AET. Tente novamente em instantes.");
+        },
+      }
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -274,14 +300,15 @@ function Dashboard() {
                   <td className="px-5 py-2.5 font-medium text-slate-900">{a.numero_aet ?? "—"}</td>
                   <td className="px-5 py-2.5">
                     {(() => {
-                      const pdfUrl = a.pdf_anexado ? buildPdfUrl(a.numero_aet) : null;
-                      if (!pdfUrl) {
-                        const title = a.pdf_anexado ? "PDF anexado, mas rota ainda não disponível" : "PDF ainda não gerado";
+                      const isRowPending = isPending && pendingId === a.id;
+                      const canDownload = Boolean(a.pdf_anexado && a.numero_aet?.includes("/"));
+
+                      if (!canDownload) {
                         return (
                           <button
                             type="button"
                             disabled
-                            title={title}
+                            title="PDF ainda não gerado"
                             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-300 cursor-not-allowed"
                           >
                             <FileSearch className="h-5 w-5" />
@@ -289,17 +316,22 @@ function Dashboard() {
                           </button>
                         );
                       }
+
                       return (
-                        <a
-                          href={pdfUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title="Abrir AET"
-                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:border-blue-300 transition-colors"
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadAet(a.id, a.numero_aet)}
+                          disabled={isRowPending}
+                          title="Baixar AET"
+                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:border-blue-300 transition-colors disabled:opacity-60 disabled:cursor-wait"
                         >
-                          <FileSearch className="h-5 w-5" />
+                          {isRowPending ? (
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                          ) : (
+                            <FileSearch className="h-5 w-5" />
+                          )}
                           <span className="text-xs font-semibold">AET</span>
-                        </a>
+                        </button>
                       );
                     })()}
                   </td>

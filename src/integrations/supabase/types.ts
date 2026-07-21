@@ -71,7 +71,6 @@ export type Database = {
           id: string
           numero_aet: string | null
           origem_carga: string | null
-          pdf_url: string | null
           portal_origem: string
           resolucao: string | null
           situacao: string
@@ -86,7 +85,6 @@ export type Database = {
           id?: string
           numero_aet?: string | null
           origem_carga?: string | null
-          pdf_url?: string | null
           portal_origem?: string
           resolucao?: string | null
           situacao?: string
@@ -101,7 +99,6 @@ export type Database = {
           id?: string
           numero_aet?: string | null
           origem_carga?: string | null
-          pdf_url?: string | null
           portal_origem?: string
           resolucao?: string | null
           situacao?: string

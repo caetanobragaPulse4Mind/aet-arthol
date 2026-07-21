@@ -99,11 +99,6 @@ function AetDetail() {
         </div>
         <div className="flex gap-2">
           <SituacaoBadge situacao={aet.situacao} />
-          {aet.pdf_url && (
-            <a href={aet.pdf_url} target="_blank" rel="noopener noreferrer">
-              <Button variant="outline" size="sm"><ExternalLink className="h-4 w-4 mr-1.5" /> Baixar PDF</Button>
-            </a>
-          )}
         </div>
       </div>
 
