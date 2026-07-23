@@ -16,7 +16,6 @@ import { Route as AuthenticatedVeiculosRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedUsuariosRouteImport } from './routes/_authenticated/usuarios'
 import { Route as AuthenticatedTrechosRouteImport } from './routes/_authenticated/trechos'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
-import { Route as AuthenticatedComposicoesRouteImport } from './routes/_authenticated/composicoes'
 import { Route as AuthenticatedBoletosRouteImport } from './routes/_authenticated/boletos'
 import { Route as AuthenticatedAetsNewRouteImport } from './routes/_authenticated/aets.new'
 import { Route as AuthenticatedAetsIdRouteImport } from './routes/_authenticated/aets.$id'
@@ -55,12 +54,6 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedComposicoesRoute =
-  AuthenticatedComposicoesRouteImport.update({
-    id: '/composicoes',
-    path: '/composicoes',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 const AuthenticatedBoletosRoute = AuthenticatedBoletosRouteImport.update({
   id: '/boletos',
   path: '/boletos',
@@ -81,7 +74,6 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/boletos': typeof AuthenticatedBoletosRoute
-  '/composicoes': typeof AuthenticatedComposicoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/trechos': typeof AuthenticatedTrechosRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
@@ -93,7 +85,6 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/boletos': typeof AuthenticatedBoletosRoute
-  '/composicoes': typeof AuthenticatedComposicoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/trechos': typeof AuthenticatedTrechosRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
@@ -107,7 +98,6 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/boletos': typeof AuthenticatedBoletosRoute
-  '/_authenticated/composicoes': typeof AuthenticatedComposicoesRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/trechos': typeof AuthenticatedTrechosRoute
   '/_authenticated/usuarios': typeof AuthenticatedUsuariosRoute
@@ -121,7 +111,6 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/boletos'
-    | '/composicoes'
     | '/dashboard'
     | '/trechos'
     | '/usuarios'
@@ -133,7 +122,6 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/boletos'
-    | '/composicoes'
     | '/dashboard'
     | '/trechos'
     | '/usuarios'
@@ -146,7 +134,6 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/boletos'
-    | '/_authenticated/composicoes'
     | '/_authenticated/dashboard'
     | '/_authenticated/trechos'
     | '/_authenticated/usuarios'
@@ -212,13 +199,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/composicoes': {
-      id: '/_authenticated/composicoes'
-      path: '/composicoes'
-      fullPath: '/composicoes'
-      preLoaderRoute: typeof AuthenticatedComposicoesRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/boletos': {
       id: '/_authenticated/boletos'
       path: '/boletos'
@@ -245,7 +225,6 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedBoletosRoute: typeof AuthenticatedBoletosRoute
-  AuthenticatedComposicoesRoute: typeof AuthenticatedComposicoesRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedTrechosRoute: typeof AuthenticatedTrechosRoute
   AuthenticatedUsuariosRoute: typeof AuthenticatedUsuariosRoute
@@ -256,7 +235,6 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedBoletosRoute: AuthenticatedBoletosRoute,
-  AuthenticatedComposicoesRoute: AuthenticatedComposicoesRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedTrechosRoute: AuthenticatedTrechosRoute,
   AuthenticatedUsuariosRoute: AuthenticatedUsuariosRoute,

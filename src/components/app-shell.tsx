@@ -1,5 +1,5 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Receipt, Truck, Boxes, Map, Users, LogOut } from "lucide-react";
+import { LayoutDashboard, Receipt, Truck, Map, Users, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,6 @@ const NAV: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/boletos", label: "Boletos", icon: Receipt },
   { to: "/veiculos", label: "Veículos", icon: Truck },
-  { to: "/composicoes", label: "Composições", icon: Boxes },
   { to: "/trechos", label: "Trechos", icon: Map, adminOnly: true },
   { to: "/usuarios", label: "Usuários", icon: Users, adminOnly: true },
 ];

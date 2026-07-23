@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { SituacaoBadge } from "@/components/situacao-badge";
 import { formatDateBR, todayISO, addDaysISO } from "@/lib/format";
 import { useDownloadAetPdf } from "@/hooks/use-download-aet-pdf";
+import { useDownloadBoletoPdf } from "@/hooks/use-download-boleto-pdf";
 import { FileText, AlertTriangle, Receipt, Clock, FileSearch, Plus, ArrowUp, ArrowDown, ArrowUpDown, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -44,19 +45,12 @@ function offsetFromYearMonth(year: number, month: number) {
   return (year - now.getFullYear()) * 12 + (month - now.getMonth());
 }
 
-// TODO: idem para o boleto. O campo que indica "PDF anexado" ainda não existe
-// na tabela `boletos` — quando existir, seguir o mesmo padrão do downloadAetPdf
-// (rota própria no aet-rpa + server function + hook) e trocar este placeholder.
-function buildBoletoUrl(boletoId: string): string | null {
-  return null; // ex futuro: proxy via server function, igual ao PDF da AET
-}
-
 function Dashboard() {
   const today = todayISO();
   const in30 = addDaysISO(30);
 
   const [situacao, setSituacao] = useState<string>("all");
-  const [placa, setPlaca] = useState("");
+  const [numeroAetFiltro, setNumeroAetFiltro] = useState("");
   const [monthOffset, setMonthOffset] = useState(0);
   const [sortKey, setSortKey] = useState<SortKey | null>("data_inicio");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -86,25 +80,22 @@ function Dashboard() {
   });
 
   const { data: aets, isLoading } = useQuery({
-    queryKey: ["dashboard-aets", situacao, placa, range.start, range.end],
+    queryKey: ["dashboard-aets", situacao, numeroAetFiltro, range.start, range.end],
     queryFn: async () => {
       // Mostra as AETs SOLICITADAS no mês selecionado (data_inicio dentro do período),
       // igual ao filtro por ano/mês do próprio site do SIAET — não mistura meses.
       let q = supabase
         .from("aets")
-        .select("id, numero_aet, resolucao, origem_carga, destino_carga, situacao, data_inicio, data_fim, pdf_anexado, composicoes(veiculos(placa), reboques(placa)), boletos(id, status)")
+        .select("id, numero_aet, resolucao, origem_carga, destino_carga, situacao, data_inicio, data_fim, pdf_anexado, boletos(id, status, boleto_anexado)")
         .gte("data_inicio", range.start)
         .lte("data_inicio", range.end)
         .order("data_inicio", { ascending: true });
       if (situacao !== "all") q = q.eq("situacao", situacao);
       const { data } = await q;
       let rows = data ?? [];
-      if (placa.trim()) {
-        const p = placa.trim().toUpperCase();
-        rows = rows.filter((a: any) =>
-          (a.composicoes?.veiculos?.placa ?? "").toUpperCase().includes(p) ||
-          (a.composicoes?.reboques?.placa ?? "").toUpperCase().includes(p)
-        );
+      if (numeroAetFiltro.trim()) {
+        const n = numeroAetFiltro.trim().toUpperCase();
+        rows = rows.filter((a: any) => (a.numero_aet ?? "").toUpperCase().includes(n));
       }
       return rows;
     },
@@ -185,6 +176,33 @@ function Dashboard() {
     );
   }
 
+  // Download do PDF do boleto: mesmo padrão do downloadAetPdf (server function
+  // proxy autenticada pro aet-rpa), mas usando o número da AET vinculada pra
+  // montar o caminho, já que o boleto em si não guarda numero/ano separados.
+  const { mutate: downloadBoleto, isPending: isBoletoPending } = useDownloadBoletoPdf();
+  const [pendingBoletoId, setPendingBoletoId] = useState<string | null>(null);
+
+  function handleDownloadBoleto(boletoId: string, numeroAetCompleto: string) {
+    const match = (numeroAetCompleto ?? "").match(/(\d+)\s*\/\s*(\d{4})/);
+    if (!match) {
+      console.error("numero_aet em formato inesperado:", JSON.stringify(numeroAetCompleto));
+      alert(`Não foi possível interpretar o número da AET: "${numeroAetCompleto}".`);
+      return;
+    }
+    const [, numeroAet, ano] = match;
+    setPendingBoletoId(boletoId);
+    downloadBoleto(
+      { numeroAet, ano },
+      {
+        onSettled: () => setPendingBoletoId(null),
+        onError: (err) => {
+          console.error("Erro ao baixar boleto:", err);
+          alert("Não foi possível baixar o PDF do boleto. Tente novamente em instantes.");
+        },
+      }
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -231,8 +249,8 @@ function Dashboard() {
             </Select>
           </div>
           <div>
-            <label className="text-xs text-slate-500 mb-1 block">Placa</label>
-            <Input placeholder="Ex: ABC1D23" value={placa} onChange={(e) => setPlaca(e.target.value)} />
+            <label className="text-xs text-slate-500 mb-1 block">Nº AET</label>
+            <Input placeholder="Ex: 284237/2026" value={numeroAetFiltro} onChange={(e) => setNumeroAetFiltro(e.target.value)} />
           </div>
         </div>
       </Card>
@@ -338,12 +356,15 @@ function Dashboard() {
                   <td className="px-5 py-2.5">
                     {(() => {
                       const boleto = a.boletos?.[0] ?? a.boletos ?? null;
-                      // Campo de PDF do boleto ainda não existe no schema — sempre desabilitado por enquanto.
-                      const boletoUrl = buildBoletoUrl(boleto?.id);
+                      const isRowPending = isBoletoPending && pendingBoletoId === boleto?.id;
+                      const canDownload = Boolean(boleto?.boleto_anexado && a.numero_aet?.includes("/"));
                       const title = !boleto
                         ? "Sem boleto vinculado"
-                        : `Boleto (${boleto.status}) — PDF ainda não disponível`;
-                      if (!boletoUrl) {
+                        : !canDownload
+                        ? `Boleto (${boleto.status}) — PDF ainda não gerado`
+                        : "Baixar boleto";
+
+                      if (!canDownload) {
                         return (
                           <button
                             type="button"
@@ -357,16 +378,20 @@ function Dashboard() {
                         );
                       }
                       return (
-                        <a
-                          href={boletoUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title="Abrir boleto"
-                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition-colors"
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadBoleto(boleto.id, a.numero_aet)}
+                          disabled={isRowPending}
+                          title={title}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition-colors disabled:opacity-60 disabled:cursor-wait"
                         >
-                          <Receipt className="h-5 w-5" />
+                          {isRowPending ? (
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                          ) : (
+                            <Receipt className="h-5 w-5" />
+                          )}
                           <span className="text-xs font-semibold">Boleto</span>
-                        </a>
+                        </button>
                       );
                     })()}
                   </td>

@@ -30,7 +30,7 @@ function AetDetail() {
     queryFn: async () => {
       const { data } = await supabase
         .from("aets")
-        .select("*, composicoes(*, veiculos(placa, marca, modelo), reboques(placa, marca, modelo))")
+        .select("*, veiculos(placa, marca, modelo), reboques(placa, marca, modelo)")
         .eq("id", id).maybeSingle();
       return data;
     },
@@ -83,7 +83,8 @@ function AetDetail() {
 
   if (!aet) return <div className="text-slate-500">Carregando...</div>;
 
-  const c = aet.composicoes as any;
+  const veiculo = aet.veiculos as any;
+  const reboque = aet.reboques as any;
 
   return (
     <div className="space-y-6">
@@ -113,18 +114,15 @@ function AetDetail() {
       </Card>
 
       <Card className="p-5">
-        <h2 className="font-semibold text-slate-900 mb-3">Composição</h2>
-        {c ? (
+        <h2 className="font-semibold text-slate-900 mb-3">Veículo / Reboque</h2>
+        {veiculo || reboque ? (
           <dl className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <Field label="Placa trator" value={c.veiculos?.placa} />
-            <Field label="Trator" value={[c.veiculos?.marca, c.veiculos?.modelo].filter(Boolean).join(" ")} />
-            <Field label="Placa reboque" value={c.reboques?.placa} />
-            <Field label="Reboque" value={[c.reboques?.marca, c.reboques?.modelo].filter(Boolean).join(" ")} />
-            <Field label="Comprimento total" value={c.comprimento_total ? `${c.comprimento_total} m` : null} />
-            <Field label="Largura total" value={c.largura_total ? `${c.largura_total} m` : null} />
-            <Field label="Altura total" value={c.altura_total ? `${c.altura_total} m` : null} />
+            <Field label="Placa trator" value={veiculo?.placa} />
+            <Field label="Trator" value={[veiculo?.marca, veiculo?.modelo].filter(Boolean).join(" ")} />
+            <Field label="Placa reboque" value={reboque?.placa} />
+            <Field label="Reboque" value={[reboque?.marca, reboque?.modelo].filter(Boolean).join(" ")} />
           </dl>
-        ) : <p className="text-sm text-slate-500">Sem composição vinculada.</p>}
+        ) : <p className="text-sm text-slate-500">Sem veículo/reboque vinculado.</p>}
       </Card>
 
       <Card className="p-0 overflow-hidden">

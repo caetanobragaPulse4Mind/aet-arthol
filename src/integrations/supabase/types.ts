@@ -63,7 +63,6 @@ export type Database = {
       }
       aets: {
         Row: {
-          composicao_id: string | null
           created_at: string
           data_fim: string | null
           data_inicio: string | null
@@ -72,12 +71,13 @@ export type Database = {
           numero_aet: string | null
           origem_carga: string | null
           portal_origem: string
+          reboque_id: string | null
           resolucao: string | null
           situacao: string
           updated_at: string
+          veiculo_id: string | null
         }
         Insert: {
-          composicao_id?: string | null
           created_at?: string
           data_fim?: string | null
           data_inicio?: string | null
@@ -86,12 +86,13 @@ export type Database = {
           numero_aet?: string | null
           origem_carga?: string | null
           portal_origem?: string
+          reboque_id?: string | null
           resolucao?: string | null
           situacao?: string
           updated_at?: string
+          veiculo_id?: string | null
         }
         Update: {
-          composicao_id?: string | null
           created_at?: string
           data_fim?: string | null
           data_inicio?: string | null
@@ -100,16 +101,25 @@ export type Database = {
           numero_aet?: string | null
           origem_carga?: string | null
           portal_origem?: string
+          reboque_id?: string | null
           resolucao?: string | null
           situacao?: string
           updated_at?: string
+          veiculo_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "aets_composicao_id_fkey"
-            columns: ["composicao_id"]
+            foreignKeyName: "aets_veiculo_id_fkey"
+            columns: ["veiculo_id"]
             isOneToOne: false
-            referencedRelation: "composicoes"
+            referencedRelation: "veiculos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aets_reboque_id_fkey"
+            columns: ["reboque_id"]
+            isOneToOne: false
+            referencedRelation: "reboques"
             referencedColumns: ["id"]
           },
         ]
@@ -154,81 +164,6 @@ export type Database = {
             columns: ["aet_id"]
             isOneToOne: false
             referencedRelation: "aets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      composicoes: {
-        Row: {
-          altura_total: number | null
-          ativo: boolean
-          comprimento_total: number | null
-          created_at: string
-          dist_b: number | null
-          dist_c: number | null
-          dist_d: number | null
-          eixos_cavalo: Json
-          eixos_reboque: Json
-          excesso_direito: number | null
-          excesso_esquerdo: number | null
-          id: string
-          largura_total: number | null
-          largura_veiculo: number | null
-          reboque_id: string
-          updated_at: string
-          veiculo_id: string
-        }
-        Insert: {
-          altura_total?: number | null
-          ativo?: boolean
-          comprimento_total?: number | null
-          created_at?: string
-          dist_b?: number | null
-          dist_c?: number | null
-          dist_d?: number | null
-          eixos_cavalo?: Json
-          eixos_reboque?: Json
-          excesso_direito?: number | null
-          excesso_esquerdo?: number | null
-          id?: string
-          largura_total?: number | null
-          largura_veiculo?: number | null
-          reboque_id: string
-          updated_at?: string
-          veiculo_id: string
-        }
-        Update: {
-          altura_total?: number | null
-          ativo?: boolean
-          comprimento_total?: number | null
-          created_at?: string
-          dist_b?: number | null
-          dist_c?: number | null
-          dist_d?: number | null
-          eixos_cavalo?: Json
-          eixos_reboque?: Json
-          excesso_direito?: number | null
-          excesso_esquerdo?: number | null
-          id?: string
-          largura_total?: number | null
-          largura_veiculo?: number | null
-          reboque_id?: string
-          updated_at?: string
-          veiculo_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "composicoes_reboque_id_fkey"
-            columns: ["reboque_id"]
-            isOneToOne: false
-            referencedRelation: "reboques"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "composicoes_veiculo_id_fkey"
-            columns: ["veiculo_id"]
-            isOneToOne: false
-            referencedRelation: "veiculos"
             referencedColumns: ["id"]
           },
         ]
